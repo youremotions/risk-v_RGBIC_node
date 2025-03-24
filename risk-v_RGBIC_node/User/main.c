@@ -217,6 +217,7 @@ void flashLed()
 int main(void)
 {
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
+    SystemInit();
     SystemCoreClockUpdate();
     Delay_Init();
     USART_Printf_Init(115200);
@@ -235,14 +236,14 @@ int main(void)
 
     while(1)
     {
-        flashLed();
+        // flashLed();
 
         // while(USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET)
         // {
         //     /* waiting for receiving finish */
         // }
         // val = (USART_ReceiveData(USART1));
-        // USART_SendData(USART1, ~val);
+        // USART_SendData(USART1, 10);
         // printf("hello");
         // while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET)
         // {
