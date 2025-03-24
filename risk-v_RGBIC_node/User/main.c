@@ -34,7 +34,7 @@ vu8 val;
 
 /* CH1CVR register Definition */
 #define TIM1_CH1CVR_ADDRESS    0x40012C34
-#define TIM1_CH4CVR_ADDRESS    0x40012C40
+// #define TIM1_CH4CVR_ADDRESS    0x40012C40
 
 /* Private variables */
 u16 pbuf[3] = {10, 50, 80};
@@ -56,15 +56,15 @@ void TIM1_PWMOut_Init(u16 arr, u16 psc, u16 ccp)
     TIM_OCInitTypeDef       TIM_OCInitStructure = {0};
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure = {0};
 
-    // RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD | RCC_APB2Periph_TIM1, ENABLE); // origianl
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB2Periph_TIM1, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD | RCC_APB2Periph_TIM1, ENABLE); // original
+    // RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB2Periph_TIM1, ENABLE);
 
-    // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2; // origianl
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2; // original
+    // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
-    // GPIO_Init(GPIOD, &GPIO_InitStructure); // original 
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
+    GPIO_Init(GPIOD, &GPIO_InitStructure); // original 
+    // GPIO_Init(GPIOC, &GPIO_InitStructure);
 
     TIM_TimeBaseInitStructure.TIM_Period = arr;
     TIM_TimeBaseInitStructure.TIM_Prescaler = psc;
@@ -227,8 +227,8 @@ int main(void)
 
     //timer DMA
     TIM1_PWMOut_Init(100, 48000 - 1, pbuf[0]);
-    // TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH1CVR_ADDRESS, (u32)pbuf, 3); // original
-    TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH4CVR_ADDRESS, (u32)pbuf, 3);
+    TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH1CVR_ADDRESS, (u32)pbuf, 3); // original
+    // TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH4CVR_ADDRESS, (u32)pbuf, 3);
     TIM_DMACmd(TIM1, TIM_DMA_Update, ENABLE);
     TIM_Cmd(TIM1, ENABLE);
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
