@@ -33,8 +33,9 @@ vu8 val;
 
 
 /* CH1CVR register Definition */
-#define TIM1_CH1CVR_ADDRESS    0x40012C34
+// #define TIM1_CH1CVR_ADDRESS    0x40012C34
 // #define TIM1_CH4CVR_ADDRESS    0x40012C40
+#define TIM2_CH3CVR_ADDRESS    0x4000003C
 
 /* Private variables */
 u16 pbuf[3] = {10, 50, 80};
@@ -84,6 +85,50 @@ void TIM1_PWMOut_Init(u16 arr, u16 psc, u16 ccp)
 }
 
 /*********************************************************************
+ * @fn      TIM2_PWMOut_Init
+ *
+ * @brief   Initializes TIM2 PWM output.
+ *
+ * @param   arr - the period value.
+ *          psc - the prescaler value.
+ *          ccp - the pulse value.
+ *
+ * @return  none
+ */
+void TIM2_PWMOut_Init(u16 arr, u16 psc, u16 ccp)
+{ //look at page 66 for dma information
+    GPIO_InitTypeDef        GPIO_InitStructure = {0};
+    TIM_OCInitTypeDef       TIM_OCInitStructure = {0};
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure = {0};
+
+    // RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB1Periph_TIM2, ENABLE);
+    RCC_APB1PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB1Periph_TIM2, ENABLE);
+
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
+    GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+    TIM_TimeBaseInitStructure.TIM_Period = arr;
+    TIM_TimeBaseInitStructure.TIM_Prescaler = psc;
+    TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+    TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0;
+    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseInitStructure);
+
+    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
+    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+    TIM_OCInitStructure.TIM_Pulse = ccp;
+    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+    TIM_OC1Init(TIM2, &TIM_OCInitStructure);
+
+    TIM_OC1PreloadConfig(TIM2, TIM_OCPreload_Disable);
+    TIM_ARRPreloadConfig(TIM2, ENABLE);
+}
+
+
+
+/*********************************************************************
  * @fn      TIM1_DMA_Init
  *
  * @brief   Initializes the TIM DMAy Channelx configuration.
@@ -97,6 +142,42 @@ void TIM1_PWMOut_Init(u16 arr, u16 psc, u16 ccp)
  * @return  none
  */
 void TIM1_DMA_Init(DMA_Channel_TypeDef *DMA_CHx, u32 ppadr, u32 memadr, u16 bufsize)
+{
+    DMA_InitTypeDef DMA_InitStructure = {0};
+
+    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+
+    DMA_DeInit(DMA_CHx);
+    DMA_InitStructure.DMA_PeripheralBaseAddr = ppadr;
+    DMA_InitStructure.DMA_MemoryBaseAddr = memadr;
+    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
+    DMA_InitStructure.DMA_BufferSize = bufsize;
+    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+    DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+    DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
+    DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+    DMA_Init(DMA_CHx, &DMA_InitStructure);
+
+    DMA_Cmd(DMA_CHx, ENABLE);
+}
+
+/*********************************************************************
+ * @fn      TIM2_DMA_Init
+ *
+ * @brief   Initializes the TIM DMAy Channelx configuration.
+ *
+ * @param   DMA_CHx -
+ *            x can be 1 to 7.
+ *          ppadr - Peripheral base address.
+ *          memadr - Memory base address.
+ *          bufsize - DMA channel buffer size.
+ *
+ * @return  none
+ */
+void TIM2_DMA_Init(DMA_Channel_TypeDef *DMA_CHx, u32 ppadr, u32 memadr, u16 bufsize)
 {
     DMA_InitTypeDef DMA_InitStructure = {0};
 
@@ -185,10 +266,10 @@ void initGpioCustom(void)
     GPIO_Init(GPIOC, &GPIO_InitStructure);
 
     //Outputs
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; // | GPIO_Pin_4 this is the test pin
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
+    // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; // | GPIO_Pin_4 this is the test pin
+    // GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
+    // GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    // GPIO_Init(GPIOC, &GPIO_InitStructure);
 }
 
 /*********************************************************************
@@ -200,8 +281,9 @@ void initGpioCustom(void)
  */
 void flashLed()
 {
-    GPIO_WriteBit(GPIOD, GPIO_Pin_0, Bit_SET);
-    GPIO_WriteBit(GPIOC, GPIO_Pin_0, (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0) == Bit_SET) ? Bit_RESET : Bit_SET);
+    // GPIO_WriteBit(GPIOD, GPIO_Pin_0, Bit_SET);
+    GPIO_WriteBit(GPIOD, GPIO_Pin_0, (GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_0) == Bit_SET) ? Bit_RESET : Bit_SET);
+    // GPIO_WriteBit(GPIOC, GPIO_Pin_0, (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0) == Bit_SET) ? Bit_RESET : Bit_SET);
     // GPIO_WriteBit(GPIOD, GPIO_Pin_2, Bit_SET); // this is the RGBIC pin
     // GPIO_WriteBit(GPIOC, GPIO_Pin_4, Bit_SET); // this is the test pin
     Delay_Ms(100); 
@@ -217,7 +299,7 @@ void flashLed()
 int main(void)
 {
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
-    SystemInit();
+    SystemInit(); // setting up at the moment
     SystemCoreClockUpdate();
     Delay_Init();
     USART_Printf_Init(115200);
@@ -227,16 +309,21 @@ int main(void)
     initGpioCustom();
 
     //timer DMA
-    TIM1_PWMOut_Init(100, 48000 - 1, pbuf[0]);
-    TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH1CVR_ADDRESS, (u32)pbuf, 3); // original
-    // TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH4CVR_ADDRESS, (u32)pbuf, 3);
-    TIM_DMACmd(TIM1, TIM_DMA_Update, ENABLE);
-    TIM_Cmd(TIM1, ENABLE);
-    TIM_CtrlPWMOutputs(TIM1, ENABLE);
+    // TIM1_PWMOut_Init(100, 48000 - 1, pbuf[0]);
+    // TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH1CVR_ADDRESS, (u32)pbuf, 3); // original
+    // TIM_DMACmd(TIM1, TIM_DMA_Update, ENABLE);
+    // TIM_Cmd(TIM1, ENABLE);
+    // TIM_CtrlPWMOutputs(TIM1, ENABLE);
+
+    TIM2_PWMOut_Init(100, 48000 - 1, pbuf[0]);
+    TIM2_DMA_Init(DMA1_Channel5, (u32)TIM2_CH3CVR_ADDRESS, (u32)pbuf, 3); // original
+    TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
+    TIM_Cmd(TIM2, ENABLE);
+    TIM_CtrlPWMOutputs(TIM2, ENABLE);
 
     while(1)
     {
-        // flashLed();
+        flashLed();
 
         // while(USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET)
         // {
