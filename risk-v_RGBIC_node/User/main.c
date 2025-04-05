@@ -33,12 +33,16 @@ vu8 val;
 
 
 /* CH1CVR register Definition */
-// #define TIM1_CH1CVR_ADDRESS    0x40012C34
-// #define TIM1_CH4CVR_ADDRESS    0x40012C40
+#define TIM1_CH1CVR_ADDRESS    0x40012C34
+#define TIM1_CH2CVR_ADDRESS    0x40012C38
+#define TIM1_CH4CVR_ADDRESS    0x40012C40
 #define TIM2_CH3CVR_ADDRESS    0x4000003C
 
 /* Private variables */
-u16 pbuf[3] = {10, 50, 80};
+#define DUTY_CYCLE_SIZE 3
+#define MAX_DUTY 100
+#define MIN_DUTY 0
+u16 pbuf[DUTY_CYCLE_SIZE] = {10, 50, 80}; // this is the array of duty cycles
 
 /*********************************************************************
  * @fn      TIM1_PWMOut_Init
@@ -85,6 +89,94 @@ void TIM1_PWMOut_Init(u16 arr, u16 psc, u16 ccp)
 }
 
 /*********************************************************************
+ * @fn      TIM1_Pin_0_PWMOut_Init
+ *
+ * @brief   Initializes TIM1_CH2 PWM output.
+ *
+ * @param   arr - the period value.
+ *          psc - the prescaler value.
+ *          ccp - the pulse value.
+ *
+ * @return  none
+ */
+void TIM1_Pin_0_PWMOut_Init(u16 arr, u16 psc, u16 ccp)
+{
+    GPIO_InitTypeDef        GPIO_InitStructure = {0};
+    TIM_OCInitTypeDef       TIM_OCInitStructure = {0};
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure = {0};
+
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD | RCC_APB2Periph_TIM1, ENABLE); // original
+
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
+    GPIO_Init(GPIOD, &GPIO_InitStructure); // original 
+
+    TIM_TimeBaseInitStructure.TIM_Period = arr;
+    TIM_TimeBaseInitStructure.TIM_Prescaler = psc;
+    TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+    TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0;
+    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseInitStructure);
+
+    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
+    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+    TIM_OCInitStructure.TIM_Pulse = ccp;
+    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+    TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+
+    TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Disable);
+    TIM_ARRPreloadConfig(TIM1, ENABLE);
+}
+
+/*********************************************************************
+ * @fn      TIM1_PWMOut_Init
+ *
+ * @brief   Initializes TIM1 PWM output. modified by ty
+ *
+ * @param   arr - the period value.
+ *          psc - the prescaler value.
+ *          ccp - the pulse value.
+ *          GPIO_Pin_Port_x - GPIO port.
+ *          GPIO_Pin_x - GPIO Pin
+ *
+ * @return  none
+ */
+void TIM1_PWMOut_Full_Init(u16 arr, u16 psc, u16 ccp, GPIO_TypeDef *GPIO_Pin_Port_x, u16 GPIO_Pin_x, TIM_TypeDef *TIMx)
+{
+    GPIO_InitTypeDef        GPIO_InitStructure = {0};
+    TIM_OCInitTypeDef       TIM_OCInitStructure = {0};
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure = {0};
+
+    // RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD | RCC_APB2Periph_TIM1 , ENABLE); // original
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD | RCC_APB2Periph_GPIOC | RCC_APB2Periph_TIM1 , ENABLE); // original
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_x; // original
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
+    GPIO_Init(GPIO_Pin_Port_x, &GPIO_InitStructure); // original 
+
+    TIM_TimeBaseInitStructure.TIM_Period = arr;
+    TIM_TimeBaseInitStructure.TIM_Prescaler = psc;
+    TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+    TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0;
+    TIM_TimeBaseInit(TIMx, &TIM_TimeBaseInitStructure);
+
+    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
+    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+    TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
+    TIM_OCInitStructure.TIM_Pulse = ccp;
+    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
+    TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
+    TIM_OC1Init(TIMx, &TIM_OCInitStructure);
+
+    TIM_OC1PreloadConfig(TIMx, TIM_OCPreload_Disable);
+    TIM_ARRPreloadConfig(TIMx, ENABLE);
+}
+
+/*********************************************************************
  * @fn      TIM2_PWMOut_Init
  *
  * @brief   Initializes TIM2 PWM output.
@@ -101,6 +193,7 @@ void TIM2_PWMOut_Init(u16 arr, u16 psc, u16 ccp)
     TIM_OCInitTypeDef       TIM_OCInitStructure = {0};
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure = {0};
 
+    // RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD | RCC_APB2Periph_TIM1, ENABLE); // original
     // RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB1Periph_TIM2, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB2Periph_GPIOC | RCC_APB1Periph_TIM2, ENABLE);
 
@@ -265,7 +358,7 @@ void initGpioCustom(void)
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
 
-    //Outputs
+    // Outputs
     // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; // | GPIO_Pin_4 this is the test pin
     // GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
     // GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
@@ -283,10 +376,10 @@ void flashLed()
 {
     // GPIO_WriteBit(GPIOD, GPIO_Pin_0, Bit_SET);
     GPIO_WriteBit(GPIOD, GPIO_Pin_0, (GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_0) == Bit_SET) ? Bit_RESET : Bit_SET);
-    // GPIO_WriteBit(GPIOC, GPIO_Pin_0, (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0) == Bit_SET) ? Bit_RESET : Bit_SET);
+    GPIO_WriteBit(GPIOC, GPIO_Pin_0, (GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_0) == Bit_SET) ? Bit_RESET : Bit_SET);
     // GPIO_WriteBit(GPIOD, GPIO_Pin_2, Bit_SET); // this is the RGBIC pin
     // GPIO_WriteBit(GPIOC, GPIO_Pin_4, Bit_SET); // this is the test pin
-    Delay_Ms(100); 
+    Delay_Ms(1); 
 }
 
 /*********************************************************************
@@ -301,29 +394,68 @@ int main(void)
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
     SystemInit(); // setting up at the moment
     SystemCoreClockUpdate();
+    RCC_HSEConfig(RCC_HSE_ON);
+    RCC_HCLKConfig(RCC_SYSCLK_Div1);
     Delay_Init();
     USART_Printf_Init(115200);
 //     printf("SystemClk:%d\r\n",SystemCoreClock);
 //     printf( "ChipID:%08x\r\n", DBGMCU_GetCHIPID() );
     USARTx_CFG();
-    initGpioCustom();
+    // initGpioCustom();
 
     //timer DMA
-    // TIM1_PWMOut_Init(100, 48000 - 1, pbuf[0]);
-    // TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH1CVR_ADDRESS, (u32)pbuf, 3); // original
-    // TIM_DMACmd(TIM1, TIM_DMA_Update, ENABLE);
-    // TIM_Cmd(TIM1, ENABLE);
-    // TIM_CtrlPWMOutputs(TIM1, ENABLE);
+    // TIM1_PWMOut_Init(100-1, 2-1, pbuf[0]);
+    // TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOD, GPIO_Pin_2, TIM1);// this works it is pulsing the original pin that the that this fuction came with
+    TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOD, GPIO_Pin_0, TIM1); //this works
+    // TIM1_Pin_0_PWMOut_Init(100-1, 2-1, pbuf[0]);//does not work
+    TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH1CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE); // original  // page 66 for dma mapping
+    // TIM1_DMA_Init(DMA1_Channel2, (u32)TIM2_CH3CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE); // original  // page 66 for dma mapping
+    TIM_DMACmd(TIM1, TIM_DMA_Update, ENABLE);
+    TIM_Cmd(TIM1, ENABLE);
+    TIM_CtrlPWMOutputs(TIM1, ENABLE);
 
-    TIM2_PWMOut_Init(100, 48000 - 1, pbuf[0]);
-    TIM2_DMA_Init(DMA1_Channel5, (u32)TIM2_CH3CVR_ADDRESS, (u32)pbuf, 3); // original
-    TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
-    TIM_Cmd(TIM2, ENABLE);
-    TIM_CtrlPWMOutputs(TIM2, ENABLE);
+
+    // TIM2_PWMOut_Init(100-1, 48000-1, pbuf[0]);
+    // TIM2_DMA_Init(DMA1_Channel2, (u32)TIM2_CH3CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE); // original
+    // TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
+    // TIM_Cmd(TIM2, ENABLE);
+    // TIM_CtrlPWMOutputs(TIM2, ENABLE);
 
     while(1)
     {
-        flashLed();
+        static int8_t direction = 1;
+        static int8_t duty = 0;
+        static int8_t resolution = 1; // lower is higher resolution
+        static u8 speed = 10; // lower is faster
+
+        while(1)
+        {
+            duty = duty + resolution*direction;
+
+            if(duty >=100)
+            {
+                duty = 100;
+                direction = -1;
+            }
+            if(duty <0)
+            {
+                duty = 0;
+                direction = 1;
+            }
+
+            pbuf[0] = pbuf[1] = pbuf[2] = (u8)duty;
+            Delay_Ms(speed);
+        }
+
+        // for(u8 i = 0; i < 100; i++) // this is 
+        // {
+        //     for(u8 j = 0; j < DUTY_CYCLE_SIZE; j++)
+        //     {
+        //         pbuf[j] = i;
+        //         Delay_Ms(10);
+        //     }
+        // }
+        // flashLed();
 
         // while(USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET)
         // {
