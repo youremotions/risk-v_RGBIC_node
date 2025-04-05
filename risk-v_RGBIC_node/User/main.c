@@ -35,8 +35,12 @@ vu8 val;
 /* CH1CVR register Definition */
 #define TIM1_CH1CVR_ADDRESS    0x40012C34
 #define TIM1_CH2CVR_ADDRESS    0x40012C38
+#define TIM1_CH3CVR_ADDRESS    0x40012C3C
 #define TIM1_CH4CVR_ADDRESS    0x40012C40
+#define TIM2_CH1CVR_ADDRESS    0x40000034
+#define TIM2_CH2CVR_ADDRESS    0x40000038
 #define TIM2_CH3CVR_ADDRESS    0x4000003C
+#define TIM2_CH4CVR_ADDRESS    0x40000040
 
 /* Private variables */
 #define DUTY_CYCLE_SIZE 3
@@ -404,17 +408,40 @@ int main(void)
     // initGpioCustom();
 
     //timer DMA
-    // TIM1_PWMOut_Init(100-1, 2-1, pbuf[0]);
+
+    //TIM1
+    // TIM1_PWMOut_Init(100-1, 2-1, pbuf[0]); // oringinal
     // TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOD, GPIO_Pin_2, TIM1);// this works it is pulsing the original pin that the that this fuction came with
+    
+    //TIM1 pin PD0 fade led, Works
     TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOD, GPIO_Pin_0, TIM1); //this works
-    // TIM1_Pin_0_PWMOut_Init(100-1, 2-1, pbuf[0]);//does not work
     TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH1CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE); // original  // page 66 for dma mapping
-    // TIM1_DMA_Init(DMA1_Channel2, (u32)TIM2_CH3CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE); // original  // page 66 for dma mapping
     TIM_DMACmd(TIM1, TIM_DMA_Update, ENABLE);
     TIM_Cmd(TIM1, ENABLE);
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
 
+    //TIM1 pin PC4 fade led, Does not work
+    // TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOC, GPIO_Pin_4, TIM1); //this works
+    // TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH4CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE); // original  // page 66 for dma mapping
+    // TIM_DMACmd(TIM1, TIM_DMA_Update, ENABLE);
+    // TIM_Cmd(TIM1, ENABLE);
+    // TIM_CtrlPWMOutputs(TIM1, ENABLE);
 
+    //TIM2 pin PC0 fade led, Does not work, I'm trying to get it to work
+    // TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOC, GPIO_Pin_0, TIM2);
+    // TIM1_DMA_Init(DMA1_Channel2, (u32)TIM2_CH3CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE);
+    // TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
+    // TIM_Cmd(TIM2, ENABLE);
+    // TIM_CtrlPWMOutputs(TIM2, ENABLE);
+
+    //TIM2 pin PD7 fade led, Does not work
+    // TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOD, GPIO_Pin_7, TIM2);
+    // TIM1_DMA_Init(DMA1_Channel2, (u32)TIM2_CH4CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE);
+    // TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
+    // TIM_Cmd(TIM2, ENABLE);
+    // TIM_CtrlPWMOutputs(TIM2, ENABLE);
+
+    //testing not working
     // TIM2_PWMOut_Init(100-1, 48000-1, pbuf[0]);
     // TIM2_DMA_Init(DMA1_Channel2, (u32)TIM2_CH3CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE); // original
     // TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
