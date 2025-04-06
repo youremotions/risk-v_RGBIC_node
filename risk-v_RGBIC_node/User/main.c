@@ -43,10 +43,30 @@ vu8 val;
 #define TIM2_CH4CVR_ADDRESS    0x40000040
 
 /* Private variables */
+
+//test pwm variables
 #define DUTY_CYCLE_SIZE 3
 #define MAX_DUTY 100
 #define MIN_DUTY 0
 u16 pbuf[DUTY_CYCLE_SIZE] = {10, 50, 80}; // this is the array of duty cycles
+
+//RGBIC variables, MCU SYSCLOCK = 8Mhz, transmission rate must be 800kHz or less,800000Hz = 1.25us per tick
+#define NUMBER_OF_RGBIC 2
+#define T1H_VALUE //min 0.65us max 0.9us typical 0.9us
+#define T0H_VALUE //min 0.20us max 0.28us typical 0.28us
+#define RESET_PERIOD //min 30us max 150us 80 us
+#define BITS_PER_RGBIC 24
+#define RGBIC_BUFFER_LENGTH ((NUMBER_OF_RGBIC * BITS_PER_RGBIC) + RESET_PERIOD)
+
+typedef union{
+    struct{
+        u8 g;
+        u8 r;
+        u8 b;
+
+    }colour;
+    u32 data;
+}RGBIC_DATA;
 
 /*********************************************************************
  * @fn      TIM1_PWMOut_Init
@@ -153,7 +173,7 @@ void TIM1_PWMOut_Full_Init(u16 arr, u16 psc, u16 ccp, GPIO_TypeDef *GPIO_Pin_Por
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStructure = {0};
 
     // RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD | RCC_APB2Periph_TIM1 , ENABLE); // original
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD | RCC_APB2Periph_GPIOC | RCC_APB2Periph_TIM1 , ENABLE); // original
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD | RCC_APB2Periph_TIM1 | RCC_APB2Periph_GPIOC , ENABLE); // original
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_x; // original
@@ -175,8 +195,10 @@ void TIM1_PWMOut_Full_Init(u16 arr, u16 psc, u16 ccp, GPIO_TypeDef *GPIO_Pin_Por
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
     TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
     TIM_OC1Init(TIMx, &TIM_OCInitStructure);
+    TIM_OC3Init(TIMx, &TIM_OCInitStructure);
 
     TIM_OC1PreloadConfig(TIMx, TIM_OCPreload_Disable);
+    TIM_OC3PreloadConfig(TIMx, TIM_OCPreload_Disable);
     TIM_ARRPreloadConfig(TIMx, ENABLE);
 }
 
@@ -345,19 +367,25 @@ void initGpioCustom(void)
 
     //Port D
     //Inputs
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_3;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD;
-    GPIO_Init(GPIOD, &GPIO_InitStructure);
+    // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_3;
+    // GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
+    // GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD;
+    // GPIO_Init(GPIOD, &GPIO_InitStructure);
     //Outputs
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; // | GPIO_Pin_2 this is the RGBIC pin
+    // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0; // | GPIO_Pin_2 this is the RGBIC pin
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_6; // | GPIO_Pin_2 this is the RGBIC pin
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(GPIOD, &GPIO_InitStructure);
 
     //Port C
     //Inputs
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_5 | GPIO_Pin_3;
+    // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_5 | GPIO_Pin_3;
+    // GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
+    // GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD;
+    // GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_30MHz;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
@@ -401,11 +429,12 @@ int main(void)
     RCC_HSEConfig(RCC_HSE_ON);
     RCC_HCLKConfig(RCC_SYSCLK_Div1);
     Delay_Init();
-    USART_Printf_Init(115200);
-//     printf("SystemClk:%d\r\n",SystemCoreClock);
-//     printf( "ChipID:%08x\r\n", DBGMCU_GetCHIPID() );
-    USARTx_CFG();
-    // initGpioCustom();
+    // USART_Printf_Init(115200);
+    // printf("SystemClk:%d\r\n",SystemCoreClock);
+    // printf( "ChipID:%08x\r\n", DBGMCU_GetCHIPID() );
+    // USARTx_CFG();
+    initGpioCustom();
+
 
     //timer DMA
 
@@ -414,7 +443,7 @@ int main(void)
     // TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOD, GPIO_Pin_2, TIM1);// this works it is pulsing the original pin that the that this fuction came with
     
     //TIM1 pin PD0 fade led, Works
-    TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOD, GPIO_Pin_0, TIM1); //this works
+    TIM1_PWMOut_Full_Init(10-1, 1-1, pbuf[0], GPIOD, GPIO_Pin_0, TIM1); //this works
     TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH1CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE); // original  // page 66 for dma mapping
     TIM_DMACmd(TIM1, TIM_DMA_Update, ENABLE);
     TIM_Cmd(TIM1, ENABLE);
@@ -428,11 +457,11 @@ int main(void)
     // TIM_CtrlPWMOutputs(TIM1, ENABLE);
 
     //TIM2 pin PC0 fade led, Does not work, I'm trying to get it to work
-    // TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOC, GPIO_Pin_0, TIM2);
-    // TIM1_DMA_Init(DMA1_Channel2, (u32)TIM2_CH3CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE);
-    // TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
-    // TIM_Cmd(TIM2, ENABLE);
-    // TIM_CtrlPWMOutputs(TIM2, ENABLE);
+    TIM1_PWMOut_Full_Init(10-1, 1-1, pbuf[0], GPIOC, GPIO_Pin_0, TIM2);
+    TIM1_DMA_Init(DMA1_Channel2, (u32)TIM2_CH3CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE);
+    TIM_DMACmd(TIM2, TIM_DMA_Update, ENABLE);
+    TIM_Cmd(TIM2, ENABLE);
+    TIM_CtrlPWMOutputs(TIM2, ENABLE);
 
     //TIM2 pin PD7 fade led, Does not work
     // TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOD, GPIO_Pin_7, TIM2);
@@ -453,25 +482,39 @@ int main(void)
         static int8_t direction = 1;
         static int8_t duty = 0;
         static int8_t resolution = 1; // lower is higher resolution
-        static u8 speed = 10; // lower is faster
-
+        static u8 speed = 1; // lower is faster
+        static u8 offset = 5;
         while(1)
         {
             duty = duty + resolution*direction;
 
-            if(duty >=100)
+            if(duty >=MAX_DUTY)
             {
-                duty = 100;
+                duty = MAX_DUTY;
                 direction = -1;
             }
-            if(duty <0)
+            if(duty <(MIN_DUTY + offset))
             {
-                duty = 0;
+                duty = MIN_DUTY + offset;
                 direction = 1;
             }
 
             pbuf[0] = pbuf[1] = pbuf[2] = (u8)duty;
-            Delay_Ms(speed);
+            // Delay_Ms(speed);
+
+
+            // // GPIO_WriteBit(GPIOD, GPIO_Pin_5, GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+            // GPIO_WriteBit(GPIOD, GPIO_Pin_6, GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+            // if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3))
+            // {
+            //     GPIO_WriteBit(GPIOD, GPIO_Pin_5, GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
+            //     // TIM1_PWMOut_Full_Init(100-1, 2-1, pbuf[0], GPIOD, GPIO_Pin_0, TIM1); //this works
+            //     // TIM1_DMA_Init(DMA1_Channel5, (u32)TIM1_CH1CVR_ADDRESS, (u32)pbuf, DUTY_CYCLE_SIZE); // original  // page 66 for dma mapping
+            //     // TIM_DMACmd(TIM1, TIM_DMA_Update, ENABLE);
+            //     // TIM_Cmd(TIM1, ENABLE);
+            //     // TIM_CtrlPWMOutputs(TIM1, ENABLE);
+            // }
+            // GPIO_WriteBit(GPIOD, GPIO_Pin_5, GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_3));
         }
 
         // for(u8 i = 0; i < 100; i++) // this is 
